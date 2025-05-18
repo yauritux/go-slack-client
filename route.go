@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
-	"github.com/sashabaranov/go-openai"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
 )
@@ -57,6 +55,10 @@ func slackInteractionHandler(c echo.Context) error {
 	}
 
 	summary := summarizeThread(replies)
+
+	if summary == "" {
+		return c.NoContent(http.StatusOK)
+	}
 
 	if err = sendMessage(api, slackEvent, summary); err != nil {
 		fmt.Printf("Error sending message reply: %v\n", err)
@@ -157,34 +159,44 @@ func slackEventHandler(c echo.Context) error {
 				return c.NoContent(http.StatusOK)
 			}
 
-			aiClient := openai.NewClient(openaiKey)
-			ctx := context.Background()
-			resp, err := aiClient.CreateChatCompletion(
-				ctx,
-				openai.ChatCompletionRequest{
-					Model: openai.GPT3Dot5Turbo,
-					Messages: []openai.ChatCompletionMessage{
-						{
-							Role:    openai.ChatMessageRoleUser,
-							Content: event.Text,
-						},
-					},
-				},
-			)
+			resp, err := getAIResponse(event.Text)
+
 			if err != nil {
-				fmt.Printf("ChatCompletion error: %v\n", err)
 				return c.NoContent(http.StatusInternalServerError)
 			}
 
-			if len(resp.Choices) > 0 {
-				if err = sendMessage(api, event, resp.Choices[0].Message.Content); err != nil {
-					return c.NoContent(http.StatusInternalServerError)
-				}
-			} else {
-				if err = sendMessage(api, event, "No response from OpenAI"); err != nil {
-					return c.NoContent(http.StatusInternalServerError)
-				}
+			if err = sendMessage(api, event, resp); err != nil {
+				return c.NoContent(http.StatusInternalServerError)
 			}
+
+			// aiClient := openai.NewClient(openaiKey)
+			// ctx := context.Background()
+			// resp, err := aiClient.CreateChatCompletion(
+			// 	ctx,
+			// 	openai.ChatCompletionRequest{
+			// 		Model: openai.GPT3Dot5Turbo,
+			// 		Messages: []openai.ChatCompletionMessage{
+			// 			{
+			// 				Role:    openai.ChatMessageRoleUser,
+			// 				Content: event.Text,
+			// 			},
+			// 		},
+			// 	},
+			// )
+			// if err != nil {
+			// 	fmt.Printf("ChatCompletion error: %v\n", err)
+			// 	return c.NoContent(http.StatusInternalServerError)
+			// }
+
+			// if len(resp.Choices) > 0 {
+			// 	if err = sendMessage(api, event, resp.Choices[0].Message.Content); err != nil {
+			// 		return c.NoContent(http.StatusInternalServerError)
+			// 	}
+			// } else {
+			// 	if err = sendMessage(api, event, "No response from OpenAI"); err != nil {
+			// 		return c.NoContent(http.StatusInternalServerError)
+			// 	}
+			// }
 		}
 	}
 
