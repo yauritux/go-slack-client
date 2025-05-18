@@ -45,7 +45,7 @@ func slackInteractionHandler(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	slackEvent := &slackevents.MessageEvent{
+	slackEvent := &slackevents.AppMentionEvent{
 		Channel:         channelID,
 		Type:            payload.Message.Type,
 		User:            user,
@@ -152,8 +152,9 @@ func slackEventHandler(c echo.Context) error {
 		}
 
 		switch event := slackEvent.InnerEvent.Data.(type) {
-		case *slackevents.MessageEvent:
-			fmt.Println("User=", event.User, "botID=", botID, "message=", event.Text, "event.BotID=", event.BotID)
+		// case *slackevents.MessageEvent:
+		case *slackevents.AppMentionEvent:
+			fmt.Println("AppMentioned by User=", event.User, "botID=", botID, "message=", event.Text, "event.BotID=", event.BotID)
 
 			if event.BotID != "" {
 				return c.NoContent(http.StatusOK)

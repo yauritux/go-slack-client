@@ -98,7 +98,7 @@ func getBotID(api *slack.Client) (string, error) {
 	return resp.BotID, nil
 }
 
-func sendMessage(api *slack.Client, event *slackevents.MessageEvent, text string) error {
+func sendMessage(api *slack.Client, event *slackevents.AppMentionEvent, text string) error {
 	fmt.Println("trying to send message reply...")
 	fmt.Println("User:", event.User, "event BotID:", event.BotID)
 	if event.BotID != "" {
